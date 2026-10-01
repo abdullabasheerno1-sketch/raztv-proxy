@@ -1,0 +1,10 @@
+{
+  "name": "raztv-proxy",
+  "version": "1.0.0",
+  "description": "Secure Vercel Proxy for IPTV Xtreme Codes",
+  "main": "index.js",
+    "scripts": {
+    "test": "echo \"Error: No test\" && exit 1"
+  },
+  "dependencies": {}
+}
