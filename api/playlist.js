@@ -1,7 +1,8 @@
 export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  const serverUrl = 'http://raztv.online/';
+  const serverUrl = 'http://raztv.online:80/';
+  const vercelBaseUrl = 'https://raztv-proxy-31ih.vercel.app/api/playlist';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,47 +12,50 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { stream_id } = req.query;
+  const { stream_id, type } = req.query;
 
-  const fetchOptions = {
-    headers: {
-      'User-Agent': 'IPTVSmartersPro'
+  // Xtream Codes പ്ലെയർ ലോഗിൻ ചെയ്യുമ്പോഴും ആപ്പ് ഡാറ്റ ഫെച്ച് ചെയ്യുമ്പോഴും ഉള്ള API റൂട്ട്
+  const action = req.query.action;
+  if (action || type || req.query.username) {
+    try {
+      const targetApi = `${serverUrl}/player_api.php?username=${username}&password=${password}${action ? '&action=' + action : ''}${type ? '&type=' + type : ''}`;
+      const apiRes = await fetch(targetApi, {
+        headers: { 'User-Agent': 'IPTVSmartersPro' }
+      });
+      const data = await apiRes.json();
+      return res.status(200).json(data);
+    } catch (e) {
+      return res.status(500).json({ error: 'API connection failed' });
     }
-  };
+  }
+
+  // ചാനൽ പ്ലേ ചെയ്യുമ്പോൾ Vercel ലിങ്ക് വഴി ഒറിജിനൽ സ്ട്രീമിലേക്ക് റീഡയറക്ട് ചെയ്യും
+  if (stream_id) {
+    const targetStreamUrl = `${serverUrl}/live/${username}/${password}/${stream_id}.m3u8`;
+    res.setHeader('Location', targetStreamUrl);
+    return res.status(302).end();
+  }
 
   try {
-    // Oru specific channel stream request cheyyumbol ithu vazhi proxy cheyyum
-    if (stream_id) {
-      const targetStreamUrl = `${serverUrl}/live/${username}/${password}/${stream_id}.m3u8`;
-      const streamRes = await fetch(targetStreamUrl, fetchOptions);
-      
-      if (!streamRes.ok) {
-        return res.status(500).send('Failed to fetch stream from server');
-      }
-
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      const bodyText = await streamRes.text();
-      return res.status(200).send(bodyText);
-    }
-
-    // M3U Playlist generation - ellam Vercel link vazhi varan
+    // ലൈവ് ചാനലുകൾ ഫെച്ച് ചെയ്ത് എല്ലാ ലിങ്കുകളും Vercel ലിങ്കാക്കി മാസ്ക് ചെയ്യുന്നു
     const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
-    const response = await fetch(apiResponse, fetchOptions);
+    const response = await fetch(apiResponse, {
+      headers: { 'User-Agent': 'IPTVSmartersPro' }
+    });
+
     const streams = await response.json();
 
     if (!Array.isArray(streams)) {
-      return res.status(500).send('Invalid response from IPTV server');
+      // Xtream Codes പ്ലേലിസ്റ്റ് ഡയറക്ട് ഫോർമാറ്റിലേക്ക് റിഡയറക്ട് ചെയ്യുന്നു
+      res.setHeader('Content-Type', 'audio/x-mpegurl; charset=utf-8');
+      const directPlaylist = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
+      return res.status(200).send(`#EXTM3U\n#EXTINF:-1, Stream List\n${directPlaylist}`);
     }
-
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const baseUrl = `${protocol}://${host}/api/playlist`;
 
     let m3uContent = '#EXTM3U\n';
     streams.forEach((st) => {
-      // Direct raz link-nu pakaram Vercel link-ilottu route cheyyunnu
-      const proxyStreamUrl = `${baseUrl}?stream_id=${st.stream_id}`;
-      m3uContent += `#EXTINF:-1 tvg-id="${st.stream_id}" tvg-name="${st.name}" group-title="Category ${st.category_id || '0'}",${st.name}\n`;
+      const proxyStreamUrl = `${vercelBaseUrl}?stream_id=${st.stream_id}`;
+      m3uContent += `#EXTINF:-1 tvg-id="${st.stream_id}" tvg-name="${st.name}" group-title="${st.category_name || 'General'}",${st.name}\n`;
       m3uContent += `${proxyStreamUrl}\n`;
     });
 
@@ -60,7 +64,8 @@ export default async function handler(req, res) {
     return res.status(200).send(m3uContent);
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Failed to fetch from IPTV server' });
+    res.setHeader('Content-Type', 'audio/x-mpegurl; charset=utf-8');
+    const fallbackUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
+    return res.status(200).send(`#EXTM3U\n#EXTINF:-1, Backup Stream\n${fallbackUrl}`);
   }
 }
