@@ -28,21 +28,24 @@ module.exports = (req, res) => {
       targetUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
     }
 
-    // Proxy the request securely to bypass server restrictions
     const client = targetUrl.startsWith('https') ? https : http;
     
     const proxyReq = client.get(targetUrl, (proxyRes) => {
-      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      // പ്രോക്സി ഹെഡറുകൾ കോപ്പി ചെയ്യുമ്പോൾ എറർ വരാതിരിക്കാൻ സുരക്ഷിതമായ രീതി
+      res.writeHead(proxyRes.statusCode, {
+        'Content-Type': proxyRes.headers['content-type'] || 'audio/mpeg',
+        'Access-Control-Allow-Origin': '*'
+      });
       proxyRes.pipe(res);
     });
 
     proxyReq.on('error', (err) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Proxy Error', details: err.message }));
+      res.end(JSON.stringify({ error: 'Proxy Request Failed', details: err.message }));
     });
 
   } catch (err) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Internal Error', details: err.message }));
+    res.end(JSON.stringify({ error: 'Server Exception', details: err.message }));
   }
 };
