@@ -1,41 +1,39 @@
 export default async function handler(req, res) {
-  const targetUrl = "http://raztv.online/get.php?username=MAGNL39E26&password=hvhS6xsuZP&type=m3u_plus&output=hls";
+    // CORS എനേബിൾ ചെയ്യാൻ (ആപ്പിൽ നിന്ന് കണക്റ്റ് ചെയ്യാൻ)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const protocol = req.headers['x-forwarded-proto'] || 'https';
-  const currentBaseUrl = `${protocol}://${host}`;
-
-  try {
-    const response = await fetch(targetUrl, {
-      headers: {
-        "User-Agent": "VLC/3.0.18 LibVLC/3.0.18",
-        "Referer": "http://raztv.online/"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
     }
 
-    let m3uContent = await response.text();
+    // നിങ്ങളുടെ ഒറിജിനൽ സെർവർ വിവരങ്ങൾ ഇവിടെ നൽകുക
+    const BASE_URL = "http://raztv.online/";
+    const USERNAME = "MAGNL39E26";
+    const PASSWORD = "hvhS6xsuZP";
 
-    const lines = m3uContent.split('\n');
-    const modifiedLines = lines.map(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        let newUrl = trimmed.replace(/https?:\/\/[^\/]+/, currentBaseUrl);
-        return newUrl;
-      }
-      return line;
-    });
+    // ആപ്പിൽ നിന്ന് വരുന്ന ആക്ഷൻ (ഉദാ: get_live_categories, get_live_streams) എടുത്തു മാറ്റുക
+    const action = req.query.action || '';
+    const category_id = req.query.category_id || '';
 
-    m3uContent = modifiedLines.join('\n');
-
-    res.setHeader('Content-Type', 'audio/x-mpegurl');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(200).send(m3uContent);
+    let targetUrl = `${BASE_URL}player_api.php?username=${USERNAME}&password=${PASSWORD}`;
     
-  } catch (error) {
-    res.status(500).send('Error fetching playlist: ' + error.message);
-  }
+    if (action) {
+        targetUrl += `&action=${action}`;
+    }
+    if (category_id) {
+        targetUrl += `&category_id=${category_id}`;
+    }
+
+    try {
+        const response = await fetch(targetUrl);
+        const data = await response.json();
+        
+        // ക്ലയന്റിലേക്ക് (ആപ്പിലേക്ക്) ഡാറ്റ പാസ്സ് ചെയ്യുക
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch from IPTV server", details: error.message });
+    }
 }
