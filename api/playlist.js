@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  const serverUrl = 'http://raztv.online:25460/';
+  const serverUrl = 'http://raztv.online/';
   
   // നിങ്ങളുടെ യഥാർത്ഥ Vercel ലിങ്ക് ഇവിടെ സെറ്റ് ചെയ്തിരിക്കുന്നു
   const vercelBaseUrl = 'https://raztv-proxy-31ih.vercel.app/api/playlist';
