@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   const password = 'hvhS6xsuZP';
   const serverUrl = 'http://raztv.online:25460';
 
-  // Allow CORS for all origins so players or web apps can fetch it smoothly
+  // Allow CORS for all origins
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,22 +14,29 @@ export default async function handler(req, res) {
 
   const { action, category_id } = req.query;
 
+  // Custom headers to mimic a real browser/player request
+  const fetchOptions = {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+  };
+
   try {
-    // 1. Fetch live categories if action is requested
+    // 1. Get Live Categories
     if (action === 'get_live_categories') {
       const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
-      const response = await fetch(apiResponse);
+      const response = await fetch(apiResponse, fetchOptions);
       const data = await response.json();
       return res.status(200).json(data);
     }
 
-    // 2. Fetch live streams or filter by category_id
+    // 2. Get Live Streams by Category ID
     if (action === 'get_live_streams') {
       let apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
       if (category_id) {
         apiResponse += `&category_id=${category_id}`;
       }
-      const response = await fetch(apiResponse);
+      const response = await fetch(apiResponse, fetchOptions);
       const streams = await response.json();
       
       const formattedStreams = Array.isArray(streams) ? streams.map(st => ({
@@ -46,7 +53,7 @@ export default async function handler(req, res) {
 
     // 3. Default: Return user account & server info JSON
     const userInfoUrl = `${serverUrl}/player_api.php?username=${username}&password=${password}`;
-    const response = await fetch(userInfoUrl);
+    const response = await fetch(userInfoUrl, fetchOptions);
     const data = await response.json();
     return res.status(200).json(data);
 
