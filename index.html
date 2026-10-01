@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sulthan TV Live</title>
-    <!-- Clappr Player CDN -->
+    <title>Sulthan TV Live Player</title>
+    <!-- Clappr Video Player CDN -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@clappr/player@latest/dist/clappr.min.js"></script>
     <style>
         body {
             margin: 0;
-            background-color: #000000;
+            background-color: #0b0b0b;
             color: #ffffff;
             font-family: Arial, sans-serif;
             display: flex;
@@ -18,23 +18,48 @@
             justify-content: center;
             height: 100vh;
         }
-        #player {
-            width: 100%;
-            max-width: 850px;
-            height: 480px;
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
         }
         h2 {
-            margin-bottom: 15px;
+            margin: 0;
             color: #00ffcc;
+            letter-spacing: 2px;
+        }
+        #player {
+            width: 100%;
+            max-width: 900px;
+            height: 500px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
 
-    <h2>SULTHAN TV LIVE</h2>
+    <div class="header">
+        <h2>SULTHAN TV LIVE</h2>
+    </div>
+    
     <div id="player"></div>
 
-    <!-- Ningalude kayil ulla JS file ithu pole link cheyyuka -->
-    <script src="script.js"></script>
+    <script>
+        // Vercel Proxy API Link
+        const streamUrl = "https://raztv-proxy.vercel.app/api/playlist";
+
+        // Clappr Video Player Initialization
+        var player = new Clappr.Player({
+            source: streamUrl,
+            parentId: "#player",
+            autoPlay: true,
+            height: "100%",
+            width: "100%",
+            mute: false,
+            plugins: [],
+        });
+    </script>
+
 </body>
 </html>
