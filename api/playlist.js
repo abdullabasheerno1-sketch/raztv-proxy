@@ -1,24 +1,21 @@
-const url = require('url');
-const http = require('http');
-
-module.exports = (req, res) => {
+export default async function handler(req, res) {
   try {
     const username = 'MAGNL39E26';
     const password = 'hvhS6xsuZP';
-    const serverUrl = 'http://raztv.online:80/';
+    const serverUrl = 'http://raztv.online';
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(200);
-      res.end();
-      return;
+      return res.status(200).end();
     }
 
-    const parsedUrl = url.parse(req.url, true);
-    const streamId = parsedUrl.query.stream_id;
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const fullUrl = new URL(req.url, `${protocol}://${host}`);
+    const streamId = fullUrl.searchParams.get('stream_id');
 
     let targetUrl = '';
     if (streamId) {
@@ -27,19 +24,19 @@ module.exports = (req, res) => {
       targetUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
     }
 
-    http.get(targetUrl, (proxyRes) => {
-      res.writeHead(proxyRes.statusCode, {
-        'Content-Type': proxyRes.headers['content-type'] || 'audio/x-mpegurl',
-        'Access-Control-Allow-Origin': '*'
-      });
-      proxyRes.pipe(res);
-    }).on('error', (err) => {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to fetch playlist', details: err.message }));
-    });
+    const response = await fetch(targetUrl);
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch from provider' });
+    }
+
+    const contentType = response.headers.get('content-type') || 'audio/x-mpegurl';
+    res.setHeader('Content-Type', contentType);
+
+    const data = await response.text();
+    return res.status(200).send(data);
 
   } catch (err) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Server Exception', details: err.message }));
+    return res.status(500).json({ error: 'Server Error', details: err.message });
   }
-};
+}
