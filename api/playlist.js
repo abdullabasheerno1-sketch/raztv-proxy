@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  const serverUrl = 'http://raztv.online/';
+  const serverUrl = 'http://raztv.online:80/';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -36,8 +36,7 @@ export default async function handler(req, res) {
         m3uContent += `${streamUrl}\n`;
       });
 
-      res.setHeader('Content-Type', 'audio/x-mpegurl');
-      res.setHeader('Content-Disposition', 'inline; filename="playlist.m3u8"');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       return res.status(200).send(m3uContent);
     }
 
