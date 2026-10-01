@@ -1,8 +1,7 @@
 export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  // സെർവർ ലിങ്ക് https ആക്കി മാറ്റിയിരിക്കുന്നു
-  const serverUrl = 'https://raztv.online:80';
+  const serverUrl = 'http://raztv.online:25460';
   const vercelBaseUrl = 'https://raztv-proxy-31ih.vercel.app/api/playlist';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,20 +21,14 @@ export default async function handler(req, res) {
   };
 
   try {
+    // ഒരു ചാനൽ പ്ലേ ചെയ്യുമ്പോൾ ഒറിജിനൽ HTTP ലിങ്കിലേക്ക് Secure ആയി റീഡയറക്ട് ചെയ്യും (ഇത് Vercel ടൈംഔട്ട് തടയും)
     if (stream_id) {
-      const targetStreamUrl = `https://raztv.online/live/${username}/${password}/${stream_id}.m3u8`;
-      const streamRes = await fetch(targetStreamUrl, fetchOptions);
-      
-      if (!streamRes.ok) {
-        return res.status(500).send('Failed to fetch stream');
-      }
-
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      const bodyText = await streamRes.text();
-      return res.status(200).send(bodyText);
+      const targetStreamUrl = `${serverUrl}/live/${username}/${password}/${stream_id}.m3u8`;
+      res.setHeader('Location', targetStreamUrl);
+      return res.status(302).end();
     }
 
-    // M3U പ്ലേലിസ്റ്റ് ജനറേറ്റ് ചെയ്യുമ്പോൾ ലിങ്കുകൾ https:// ലേക്ക് മാറ്റി നൽകുന്നു
+    // M3U പ്ലേലിസ്റ്റ് ജനറേറ്റ് ചെയ്യുമ്പോൾ യൂസർനെയിമും പാസ്‌വേഡും ആരും നേരിട്ട് കാണാത്ത രീതിയിൽ Vercel ലിങ്ക് മാത്രമായി നൽകും
     const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
     const response = await fetch(apiResponse, fetchOptions);
     const streams = await response.json();
