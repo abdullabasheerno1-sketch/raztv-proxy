@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   const password = 'hvhS6xsuZP';
   const serverUrl = 'http://raztv.online:25460';
 
-  // Allow CORS for all origins
+  // Allow CORS for all origins so players or web apps can fetch it smoothly
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   const { action, category_id } = req.query;
 
   try {
-    // 1. Get Live Categories
+    // 1. Fetch live categories if action is requested
     if (action === 'get_live_categories') {
       const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
       const response = await fetch(apiResponse);
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    // 2. Get Live Streams by Category ID
+    // 2. Fetch live streams or filter by category_id
     if (action === 'get_live_streams') {
       let apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
       if (category_id) {
@@ -32,7 +32,6 @@ export default async function handler(req, res) {
       const response = await fetch(apiResponse);
       const streams = await response.json();
       
-      // Map streams to include playable Vercel/Proxy stream links
       const formattedStreams = Array.isArray(streams) ? streams.map(st => ({
         stream_id: st.stream_id,
         name: st.name,
@@ -45,7 +44,7 @@ export default async function handler(req, res) {
       return res.status(200).json(formattedStreams);
     }
 
-    // 3. Default: Return user account info & server info JSON (เหมือน raw response)
+    // 3. Default: Return user account & server info JSON
     const userInfoUrl = `${serverUrl}/player_api.php?username=${username}&password=${password}`;
     const response = await fetch(userInfoUrl);
     const data = await response.json();
@@ -56,4 +55,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to fetch from IPTV server' });
   }
 }
-
