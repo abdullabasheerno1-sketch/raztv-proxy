@@ -5,7 +5,7 @@ module.exports = (req, res) => {
   try {
     const username = 'MAGNL39E26';
     const password = 'hvhS6xsuZP';
-    const serverUrl = 'http://raztv.online';
+    const serverUrl = 'http://raztv.online:80/';
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -27,7 +27,6 @@ module.exports = (req, res) => {
       targetUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
     }
 
-    // സെർവർ വഴി പ്ലേലിസ്റ്റ് ഡാറ്റ നേരിട്ട് ഫെച്ച് ചെയ്ത് പ്ലെയറിലേക്ക് നൽകുന്നു
     http.get(targetUrl, (proxyRes) => {
       res.writeHead(proxyRes.statusCode, {
         'Content-Type': proxyRes.headers['content-type'] || 'audio/x-mpegurl',
@@ -44,4 +43,3 @@ module.exports = (req, res) => {
     res.end(JSON.stringify({ error: 'Server Exception', details: err.message }));
   }
 };
-
