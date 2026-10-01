@@ -1,10 +1,5 @@
 export default async function handler(req, res) {
-  // നിങ്ങളുടെ Xtream Codes വിവരങ്ങൾ ഇവിടെ നൽകിയിരിക്കുന്നു
-  const serverUrl = "http://46.249.110.190"; // അല്ലെങ്കിൽ raztv.online
-  const username = "MAGNL39E26";
-  const password = "hvhS6xsuZP";
-  
-  const targetUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus&output=hls`;
+  const targetUrl = "http://raztv.online/get.php?username=MAGNL39E26&password=hvhS6xsuZP&type=m3u_plus&output=hls";
 
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -14,7 +9,7 @@ export default async function handler(req, res) {
     const response = await fetch(targetUrl, {
       headers: {
         "User-Agent": "VLC/3.0.18 LibVLC/3.0.18",
-        "Referer": serverUrl
+        "Referer": "http://raztv.online/"
       }
     });
 
@@ -24,7 +19,6 @@ export default async function handler(req, res) {
 
     let m3uContent = await response.text();
 
-    // M3U ഫയലിലെ ലിങ്കുകൾ മാറ്റി Vercel ഡൊമെയ്ൻ സെറ്റ് ചെയ്യുന്നു
     const lines = m3uContent.split('\n');
     const modifiedLines = lines.map(line => {
       const trimmed = line.trim();
