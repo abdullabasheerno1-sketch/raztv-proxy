@@ -1,8 +1,8 @@
 module.exports = function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  // പോർട്ട് 25460 മാറ്റി പോർട്ട് 80 നൽകിയിരിക്കുന്നു
-  const serverUrl = 'http://raztv.online'; 
+
+  const serverUrl = 'http://raztv.online:80'; 
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
