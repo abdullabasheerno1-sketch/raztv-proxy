@@ -2,7 +2,6 @@ export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
   const serverUrl = 'http://raztv.online:80/';
-  const streamServerUrl = 'http://raztv.online/';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -12,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { action } = req.query;
+  const { stream_id } = req.query;
 
   const fetchOptions = {
     headers: {
@@ -21,6 +20,21 @@ export default async function handler(req, res) {
   };
 
   try {
+    // Oru specific channel stream request cheyyumbol ithu vazhi proxy cheyyum
+    if (stream_id) {
+      const targetStreamUrl = `${serverUrl}/live/${username}/${password}/${stream_id}.m3u8`;
+      const streamRes = await fetch(targetStreamUrl, fetchOptions);
+      
+      if (!streamRes.ok) {
+        return res.status(500).send('Failed to fetch stream from server');
+      }
+
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      const bodyText = await streamRes.text();
+      return res.status(200).send(bodyText);
+    }
+
+    // M3U Playlist generation - ellam Vercel link vazhi varan
     const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
     const response = await fetch(apiResponse, fetchOptions);
     const streams = await response.json();
@@ -29,29 +43,20 @@ export default async function handler(req, res) {
       return res.status(500).send('Invalid response from IPTV server');
     }
 
-    // Single stream request or full M3U playlist based on action
-    if (action === 'stream' || req.url.includes('.m3u8')) {
-      let m3uContent = '#EXTM3U\n';
-      streams.forEach((st) => {
-        const streamUrl = `${streamServerUrl}/live/${username}/${password}/${st.stream_id}.m3u8`;
-        m3uContent += `#EXTINF:-1 tvg-id="${st.stream_id}" tvg-name="${st.name}" group-title="Category ${st.category_id || '0'}",${st.name}\n`;
-        m3uContent += `${streamUrl}\n`;
-      });
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = `${protocol}://${host}/api/playlist`;
 
-      res.setHeader('Content-Type', 'audio/x-mpegurl; charset=utf-8');
-      res.setHeader('Content-Disposition', 'inline; filename="playlist.m3u8"');
-      return res.status(200).send(m3uContent);
-    }
-
-    // Default response as full m3u playlist to match requested format
     let m3uContent = '#EXTM3U\n';
     streams.forEach((st) => {
-      const streamUrl = `${streamServerUrl}/live/${username}/${password}/${st.stream_id}.m3u8`;
+      // Direct raz link-nu pakaram Vercel link-ilottu route cheyyunnu
+      const proxyStreamUrl = `${baseUrl}?stream_id=${st.stream_id}`;
       m3uContent += `#EXTINF:-1 tvg-id="${st.stream_id}" tvg-name="${st.name}" group-title="Category ${st.category_id || '0'}",${st.name}\n`;
-      m3uContent += `${streamUrl}\n`;
+      m3uContent += `${proxyStreamUrl}\n`;
     });
 
     res.setHeader('Content-Type', 'audio/x-mpegurl; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="playlist.m3u8"');
     return res.status(200).send(m3uContent);
 
   } catch (error) {
