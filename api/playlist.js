@@ -1,9 +1,7 @@
 export default async function handler(req, res) {
   const username = 'MAGNL39E26';
   const password = 'hvhS6xsuZP';
-  const serverUrl = 'http://raztv.online/';
-  
-  // നിങ്ങളുടെ യഥാർത്ഥ Vercel ലിങ്ക് ഇവിടെ സെറ്റ് ചെയ്തിരിക്കുന്നു
+  const serverUrl = 'http://raztv.online:89/';
   const vercelBaseUrl = 'https://raztv-proxy-31ih.vercel.app/api/playlist';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,26 +16,51 @@ export default async function handler(req, res) {
 
   const fetchOptions = {
     headers: {
-      'User-Agent': 'IPTVSmartersPro'
+      'User-Agent': 'VLC/3.0.16 LibVLC/3.0.16'
     }
   };
 
   try {
-    // ഒരു പ്രത്യേക ചാനൽ പ്ലേ ചെയ്യുമ്പോൾ അത് Vercel വഴി പ്രോക്സി ചെയ്ത് എടുത്തു കൊടുക്കും
     if (stream_id) {
       const targetStreamUrl = `${serverUrl}/live/${username}/${password}/${stream_id}.m3u8`;
       const streamRes = await fetch(targetStreamUrl, fetchOptions);
       
       if (!streamRes.ok) {
-        return res.status(500).send('Failed to fetch stream from server');
+        return res.status(500).send('Failed to fetch stream');
       }
 
+      const m3u8Content = await streamRes.text();
+      
+      // ഒറിജിനൽ സെർവർ ലിങ്കുകളെ Vercel വഴി വരുന്ന TS/M3U8 ഫ്രാഗ്മെന്റുകളിലേക്ക് മാറ്റി പ്രോക്സി ചെയ്യുന്നു
+      const modifiedContent = m3u8Content.split('\n').map(line => {
+        if (line && !line.startsWith('#')) {
+          if (line.startsWith('http')) {
+            return `${vercelBaseUrl}?stream_segment=${encodeURIComponent(line)}`;
+          } else {
+            const absoluteSegmentUrl = `${serverUrl}/live/${username}/${password}/${line}`;
+            return `${vercelBaseUrl}?stream_segment=${encodeURIComponent(absoluteSegmentUrl)}`;
+          }
+        }
+        return line;
+      }).join('\n');
+
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      const bodyText = await streamRes.text();
-      return res.status(200).send(bodyText);
+      return res.status(200).send(modifiedContent);
     }
 
-    // M3U പ്ലേലിസ്റ്റ് ജനറേറ്റ് ചെയ്യുമ്പോൾ എല്ലാ ചാനലുകളും നിങ്ങളുടെ Vercel ലിങ്ക് വഴി മാത്രം വരുന്ന രീതിയിൽ
+    // സെഗ്മെന്റ് പ്രോക്സി ചെയ്യാനുള്ള ഭാഗം
+    const { stream_segment } = req.query;
+    if (stream_segment) {
+      const segmentRes = await fetch(stream_segment, fetchOptions);
+      if (!segmentRes.ok) {
+        return res.status(500).send('Failed to fetch segment');
+      }
+      res.setHeader('Content-Type', segmentRes.headers.get('content-type') || 'video/mp2t');
+      const buffer = await segmentRes.arrayBuffer();
+      return res.status(200).send(Buffer.from(buffer));
+    }
+
+    // M3U പ്ലേലിസ്റ്റ് ജനറേഷൻ
     const apiResponse = `${serverUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
     const response = await fetch(apiResponse, fetchOptions);
     const streams = await response.json();
@@ -59,6 +82,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Failed to fetch from IPTV server' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
