@@ -1,20 +1,25 @@
-export default function handler(req, res) {
-  const username = 'MAGNL39E26';
-  const password = 'hvhS6xsuZP';
-  const serverUrl = 'http://raztv.online:80/';
+const axios = require('axios');
 
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const host = req.headers.host;
-  const fullUrl = new URL(req.url, `${protocol}://${host}`);
-  const streamId = fullUrl.searchParams.get('stream_id');
+module.exports = async (req, res) => {
+  let targetUrl = 'http://raztv.online/live/MAGNL39E26/hvhS6xsuZP/1339214.m3u8';
 
-  let targetUrl = '';
-  if (streamId) {
-    targetUrl = `${serverUrl}/live/${username}/${password}/${streamId}.m3u8`;
-  } else {
-    targetUrl = `${serverUrl}/get.php?username=${username}&password=${password}&type=m3u_plus`;
+  try {
+    const response = await axios({
+      method: 'get',
+      url: targetUrl,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Referer': 'http://raztv.online/',
+        'Accept': '*/*'
+      },
+      timeout: 10000
+    });
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(response.data);
+
+  } catch (error) {
+    return res.status(500).send('Error Details: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
   }
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.redirect(302, targetUrl);
-}
+};
