@@ -1,6 +1,10 @@
 const axios = require('axios');
 
 module.exports = async (req, res) => {
+  const vercelHost = req.headers.host;
+  const protocol = 'https';
+  const vercelBase = `${protocol}://${vercelHost}`;
+
   let targetUrl = 'http://raztv.online/live/MAGNL39E26/hvhS6xsuZP/1339214.m3u8';
 
   try {
@@ -15,11 +19,27 @@ module.exports = async (req, res) => {
       timeout: 10000
     });
 
+    let body = response.data;
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'text/plain');
-    return res.status(200).send(response.data);
+    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+
+    // പ്ലേലിസ്റ്റിലെ ലൈനുകൾ മാറ്റിയെഴുതുന്നു
+    const lines = body.split('\n');
+    const modifiedLines = lines.map(line => {
+      if (line && !line.startsWith('#')) {
+        let segmentUrl = line;
+        if (!line.startsWith('http')) {
+          segmentUrl = new URL(line, targetUrl).toString();
+        }
+        // സെഗ്മെന്റ് ലിങ്കുകളെയും പ്രൊക്സി വഴിയാക്കുന്നു
+        return `${vercelBase}/${encodeURIComponent(segmentUrl)}`;
+      }
+      return line;
+    });
+
+    return res.status(200).send(modifiedLines.join('\n'));
 
   } catch (error) {
-    return res.status(500).send('Error Details: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
+    return res.status(500).send('Proxy Error: ' + error.message);
   }
 };
